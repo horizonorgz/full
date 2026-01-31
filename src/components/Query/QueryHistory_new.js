@@ -54,7 +54,7 @@ export const QueryHistory = ({ queries, user }) => {
                       name: parsed.name,
                     };
                   }
-                  // Check if it's an array of objects (common JSON format)
+                  // Check if it is an array of objects (common JSON format)
                   if (
                     Array.isArray(parsed) &&
                     parsed.length > 0 &&
@@ -128,7 +128,7 @@ export const QueryHistory = ({ queries, user }) => {
           No Query History
         </h3>
         <p className="text-gray-400 font-normaltext">
-          Your query history will appear here once you start analyzing data.
+          Your query history will appear here once you start analyzing the data.
         </p>
       </div>
     );
@@ -187,9 +187,11 @@ export const QueryHistory = ({ queries, user }) => {
                     ) : (
                       <CheckCircle className="h-5 w-5 text-green-400" />
                     )}
-                    <h4 className="text-white font-normaltext font-medium truncate">
-                      {query.query}
-                    </h4>
+
+  <h4 className="text-white font-medium truncate">
+    {query.query}
+  </h4>
+
                   </div>
 
                   <div className="flex items-center space-x-4 text-sm text-gray-400">

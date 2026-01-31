@@ -7,9 +7,11 @@ import {
   EyeOff,
   ChevronDown,
   ChevronUp,
+  BarChart3,
 } from "lucide-react";
 import LoadingSpinner from "../common/LoadingSpinner";
 import APIKeyErrorGuide from "../common/APIKeyErrorGuide";
+import ChartVisualization from "./ChartVisualization";
 import { queryAPI } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -118,12 +120,15 @@ export const QueryInterface = ({
 
       const queryResult = {
         query: currentQuery,
+        rephrasedQuery: result.rephrased_query || null,
         generatedCode:
           result.generated_code || result.code || "No code generated",
         result: result.result,
         executionTime: `${result.execution_time?.toFixed(2)}s` || "Unknown",
         timestamp: new Date(),
         queryId: result.query_id,
+        responseType: result.response_type || "data",
+        intent: result.intent || "data",
       };
 
       console.log("Final queryResult:", queryResult);
@@ -417,9 +422,29 @@ export const QueryInterface = ({
               {/* Result Header */}
               <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-gray-800 font-normaltext font-medium">
-                    Query: {result.query}
-                  </h4>
+                  <div className="flex-1">
+                    <h4 className="text-gray-800 font-normaltext font-medium">
+                      Query: {result.query}
+                    </h4>
+                    {result.rephrasedQuery && result.rephrasedQuery !== result.query && (
+                      <p className="text-sm text-blue-600 mt-1 flex items-center">
+                        <Lightbulb size={14} className="mr-1" />
+                        <span className="font-medium">Interpreted as:</span>
+                        <span className="ml-1 italic">{result.rephrasedQuery}</span>
+                      </p>
+                    )}
+                    {result.responseType === "conversational" && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                        💬 Insight Response
+                      </span>
+                    )}
+                    {result.responseType === "visualization" && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                        <BarChart3 className="w-3 h-3 mr-1" />
+                        Visualization
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-gray-500">
                     {result.executionTime} •{" "}
                     {result.timestamp.toLocaleTimeString()}
@@ -427,8 +452,8 @@ export const QueryInterface = ({
                 </div>
               </div>
 
-              {/* Generated Code - Conditionally Rendered */}
-              {showGeneratedCode && (
+              {/* Generated Code - Conditionally Rendered (only for data queries) */}
+              {showGeneratedCode && result.responseType !== "conversational" && result.responseType !== "visualization" && (
                 <div className="p-4 border-b border-gray-200">
                   <h5 className="text-sm font-medium text-gray-700 mb-2">
                     Generated Code:
@@ -444,7 +469,7 @@ export const QueryInterface = ({
               {/* Result Data */}
               <div className="p-4">
                 <h5 className="text-sm font-medium text-gray-700 mb-2">
-                  Result:
+                  {result.responseType === "conversational" ? "Analysis:" : "Result:"}
                 </h5>
                 {result.result?.type === "dataframe" && result.result.data && (
                   <div className="overflow-x-auto">
@@ -517,12 +542,59 @@ export const QueryInterface = ({
                   </div>
                 )}
 
+                {/* Text/Conversational Response */}
+                {result.result?.type === "text" && (
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 mt-1">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                        {result.result.data}
+                      </div>
+                    </div>
+                    {result.intent === "conversational" && (
+                      <div className="mt-3 pt-2 border-t border-blue-200">
+                        <span className="text-xs text-blue-600 font-medium">
+                          💡 This is an analytical insight based on your dataset
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Message Response (for empty results, etc.) */}
+                {result.result?.type === "message" && (
+                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 mt-1">
+                        <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div className="text-gray-700 text-sm">
+                        {result.result.data}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {result.result?.type === "scalar" && (
                   <div className="bg-gray-50 border border-gray-200 p-3 rounded">
                     <pre className="text-gray-700 text-sm whitespace-pre-wrap">
                       {result.result.data}
                     </pre>
                   </div>
+                )}
+
+                {/* Visualization Response */}
+                {result.result?.type === "visualization" && (
+                  <ChartVisualization
+                    chartConfig={result.result.data}
+                    reasoning={result.result.chart_reasoning}
+                  />
                 )}
 
                 {!result.result && (
